@@ -2,7 +2,7 @@ require 'elasticsearch'
 require 'byebug'
 
 class ExportPropertyWithOutPrice
-  HOST = "localhost:19200"
+  HOST = "localhost:14000"
   INDEX = "phobo_reading"
 
   def initialize(options = {})
@@ -25,7 +25,7 @@ class ExportPropertyWithOutPrice
       end
     end
 
-    @export.flush!
+    @exporter.flush!
   end
 
   def scroll(&block)
@@ -60,9 +60,10 @@ class ExportPropertyWithOutPrice
     {
       query: {
         bool: {
-          must: {
-            missing: { field: :daily_price }
-          }
+          must: [
+            { missing: { field: :daily_price } },
+            { term: { date: Date.today }}
+          ]
         }
       }
     }
