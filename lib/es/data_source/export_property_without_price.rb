@@ -1,17 +1,17 @@
 require 'elasticsearch'
-require 'byebug'
 
 class ExportPropertyWithOutPrice
   HOST = "localhost:14000"
   INDEX = "phobo_reading"
 
   def initialize(options = {})
-    @exporter = options[:exporter]
   end
 
-  def execute!
+  def write(output)
     scroll_all do |slice_data|
-      export(slice_data)
+      slice_data["hits"]["hits"].each do |d|
+        output << d["_source"].values
+      end
     end
   end
 
@@ -24,8 +24,6 @@ class ExportPropertyWithOutPrice
         block.call(result)
       end
     end
-
-    @exporter.flush!
   end
 
   def scroll(&block)
@@ -52,10 +50,6 @@ class ExportPropertyWithOutPrice
     @client ||= Elasticsearch::Client.new(host: HOST)
   end
 
-  def export(data)
-    @exporter.export(data)
-  end
-
   def query_hash
     {
       query: {
@@ -65,15 +59,8 @@ class ExportPropertyWithOutPrice
             { term: { date: Date.today }}
           ]
         }
-      }
+      },
+      _source: [ :room_id, :unit_id ]
     }
   end
 end
-
-require_relative 'csv_export'
-
-options = {
-  exporter: CsvExport.new
-}
-
-ExportPropertyWithOutPrice.new(options).execute!
